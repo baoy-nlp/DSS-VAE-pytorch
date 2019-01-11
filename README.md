@@ -1,1 +1,1 @@
-An implementation of Variational Autoencoders.
+An implementation of Variational Autoencoders for Text Generation.
