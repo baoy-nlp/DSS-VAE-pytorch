@@ -1,0 +1,11 @@
+rm_repeat: true
+cut_off: 1
+max_src_vocab: 30000
+max_tgt_vocab: 300
+max_src_length: 30
+max_tgt_length: -1
+train_file: /home/user_data/baoy/projects/seq2seq_parser/data/webnlg/train.raw.con
+dev_file: /home/user_data/baoy/projects/seq2seq_parser/data/webnlg/dev.raw.con
+test_file: /home/user_data/baoy/projects/seq2seq_parser/data/webnlg/test.raw.con
+origin_tgts: /home/user_data/baoy/projects/seq2seq_parser/data/webnlg
+sample_tgts: /home/user_data/baoy/projects/seq2seq_parser/data/webnlg-sample

@@ -1,0 +1,242 @@
+base_configs:
+# file configs:
+  start_iter: 0
+  config_path: "/home/user_data/baoy/projects/seq2seq_parser/configs/quora.yaml"
+  train_file: "/home/user_data/baoy/projects/seq2seq_parser/data/quora-mh/unsupervised/ms-all/train.bin"
+  dev_file: "/home/user_data/baoy/projects/seq2seq_parser/data/quora-mh/unsupervised/ms-all/dev.bin"
+  test_file: "/home/user_data/baoy/projects/seq2seq_parser/data/quora-mh/unsupervised/ms-all/test.bin"
+  vocab: "/home/user_data/baoy/projects/seq2seq_parser/data/quora-mh/unsupervised/ms-all/vocab.bin"
+  unlabeled_file: ~
+  logdir: &log /home/user_data/baoy/experiments/Semi/new_log
+  save_decode_to: ~
+  model_dir: "/home/user_data/baoy/experiments/Semi/model/ms-all"
+# model configs:
+  mode: ~
+  load_decoder: ~
+  load_baseline: ~
+  load_prior: ~
+  load_encoder: ~
+  load_src_lm: ~
+# model parameter set
+  embed_size: &embed_size 300
+  cuda: &use_cuda true
+  hidden_size: &hidden_size 200
+  word_dropout: &wd 0.2
+  dropout: &drop 0.1
+  seed: 5783287
+# train configs:
+  batch_size: 50
+  lr: 0.001
+  lr_decay: 0.7
+  lr_decay_after_epoch: 5
+  log_every: 50
+  patience: 8
+  max_num_trial: 20
+  dev_every: 500
+  clip_grad: 5.0
+  reset_optimizer: false
+  src_max_time_step: &smts 40
+  tgt_max_time_step: &tmts 120
+  sample_size: &samplesize 5
+  beam_size: *samplesize
+  fixed_grad: &fg false
+  clip_learning_signal: ~
+  begin_semisup_after_dev_acc: 0.0
+  unsup_loss_weight: 1.0
+  valid_metric: p_acc
+  uniform_init: ~
+  max_epoch: 20000
+  train_opt: "reinforce"
+  unsup_batch_size: 10
+  kl_anneal: false
+  alpha: 0.1
+  verbose: false
+  eval_mode: F1
+  num_layers: &nl 3
+  exp_name: &exp_n ~
+  model_backup: reproduct
+
+prior_configs:
+  model_select: &prior_name LSTMPrior
+  cuda: *use_cuda
+  share_embed: true
+  embed_size: *embed_size
+  hidden_size: *hidden_size
+  dropout: *drop
+  model_file: *prior_name
+  decode_max_time_step: *tmts
+
+encoder_configs:
+  model_select: &encoder_name MySeqParser
+  cuda: *use_cuda
+  embed_size: *embed_size
+  hidden_size: *hidden_size
+  input_drop: *wd
+  dropout_dw: *wd
+  dropout: *drop
+  share_embed: true
+  model_file: *encoder_name
+  decode_max_time_step: *tmts
+  bidirectional: &bidirectional true
+  src_max_time_step: *smts
+  tgt_max_time_step: *tmts
+  use_attention: true
+  num_layers: *nl
+  sample_size: 5
+  eval_mode: F1
+
+baseline_configs:
+  bidirectional: *bidirectional
+  cuda: *use_cuda
+  fixed_grad: *fg
+  hidden_size: *hidden_size
+  model_select: &baseline_name LMBaseline
+  model_file: *baseline_name
+  num_layers: *nl
+  share_embed: true
+
+decoder_configs:
+  bidirectional: *bidirectional
+  cuda: *use_cuda
+  decode_max_time_step: *smts
+  dropout_dw: *wd
+  dropout: *drop
+  embed_size: *embed_size
+  eval_mode: bleu
+  hidden_size: *hidden_size
+  input_drop: *wd
+  model_select: &decoder_name MySeqReconstructor
+  model_file: *decoder_name
+  num_layers: *nl
+  rnn_type: gru
+  sample_size: 5
+  share_embed: true
+  src_max_time_step: *tmts
+  tgt_max_time_step: *smts
+  use_attention: true
+
+parser_configs:
+  embed_size: &pes 300
+  hidden_size: &phs 400
+  rnn_drop: &prd 0.1
+  latent_size: 100
+# seq2seq model parameter
+  rnn_type: gru
+  src_max_time_step: *smts
+  enc_embed_dim: *pes
+  enc_hidden_dim: *phs
+  enc_ed: 0.0
+  enc_rd: *prd
+  enc_num_layers: 3
+  bidirectional: true
+  use_attention: true
+  mapper_type: link
+  tgt_max_time_step: *tmts
+  dec_embed_dim: *pes
+  dec_hidden_dim: *phs
+  dec_ed: 0.25
+  dec_rd: *prd
+  dec_num_layers: 1
+  model_select: &parser_name MySeqBaseParser
+  cuda: *use_cuda
+  model_file: *parser_name
+  sample_size: 5
+  eval_mode: F1
+
+vae_configs:
+  model_select: &vms DVAE
+#  model_select: &vms OriginVAE
+  embed_size: &ves 300
+  hidden_size: &vhs 300
+  num_layers: &vnl 2
+  rnn_drop: &vrd 0.1
+  latent_size: 100
+# seq2seq model parameter
+  rnn_type: gru
+  src_max_time_step: *smts
+  enc_embed_dim: *ves
+  enc_hidden_dim: *vhs
+  enc_num_layers: *vnl
+  bidirectional: true
+  use_attention: false
+  mapper_type: link
+  tgt_max_time_step: *tmts
+  dec_embed_dim: *ves
+  dec_hidden_dim: *vhs
+  dec_num_layers: *vnl
+# vae parameter
+  cuda: *use_cuda
+  decode_max_time_step: *smts
+  eval_mode: bleu
+  logdir: *log
+  log_every: 10
+  model_file: *vms
+  max_sequecne_length: 300
+  print_every: 10
+  sample_size: 5
+  share_embed: true
+  tensorboard_logging: true
+  use_attention: false
+  enc_ed: 0.0
+  enc_rd: 0.0
+  dec_ed: *vrd
+  dec_rd: *vrd
+  unk_rate: 0.50
+  k: 0.0025
+  x0: 10000
+  epochs: 10
+  anneal_function: logistic
+  unk_schedule: logistic
+  src_wd: false
+  tgt_wd: true
+  peak_anneal: false
+  init_step_kl_weight: ~
+  reload_model: false
+  stop_clip_kl: 0.3
+  warm_up: true
+  kl_factor: 1.0
+#  aux_weight: 0.3
+  mul_syn: 1
+  mul_sem: 5.0
+  adv_syn: 0.5
+  adv_sem: 0.5
+  infer_weight: 0.0
+  inf_syn: 1.0
+  inf_sem: 1.0
+  syn_weight: 1
+  sem_weight: 5.0
+  eval_adv: false
+  eval_mul: false
+  dis_train: true
+  dev_item: PARA
+  eval_bs: 10
+
+ae_configs:
+  embed_size: &aes 300
+  hidden_size: &ahs 300
+  num_layers: &anl 3
+  rnn_drop: &ard 0.1
+# seq2seq model parameter
+  rnn_type: gru
+  src_max_time_step: *smts
+  enc_embed_dim: *aes
+  enc_hidden_dim: *ahs
+  enc_num_layers: *anl
+  bidirectional: true
+  use_attention: false
+  mapper_type: link
+  tgt_max_time_step: *tmts
+  dec_embed_dim: *aes
+  dec_hidden_dim: *ahs
+  dec_num_layers: *anl
+  enc_ed: *ard
+  enc_rd: *ard
+  dec_ed: *ard
+  dec_rd: *ard
+  model_select: &ae AutoEncoder
+  model_file: *ae
+  share_embed: true
+  cuda: *use_cuda
+  word_drop: 0.25
+  sample_size: 5
+  eval_mode: bleu

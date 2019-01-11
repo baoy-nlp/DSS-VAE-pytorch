@@ -1,0 +1,168 @@
+base_configs:
+# file configs:
+  config_path: "/home/user_data/baoy/projects/seq2seq_parser/configs/snli.yaml"
+  train_file: "/home/user_data/baoy/projects/seq2seq_parser/data/snli/train.bin"
+  dev_file: "/home/user_data/baoy/projects/seq2seq_parser/data/snli/dev.bin"
+  test_file: "/home/user_data/baoy/projects/seq2seq_parser/data/snli/test.bin"
+  vocab: "/home/user_data/baoy/projects/seq2seq_parser/data/snli/vocab.bin"
+  unlabeled_file: ~
+  logdir: &log /home/user_data/baoy/experiments/Semi/log
+  save_decode_to: ~
+  model_dir: "/home/user_data/baoy/experiments/Semi/model/snli/snli-full"
+# model configs:
+  model_select: "SeqParserVAE"
+  mode: ~
+  load_decoder: ~
+  load_baseline: ~
+  load_prior: ~
+  load_encoder: ~
+  load_src_lm: ~
+# model parameter set
+  embed_size: &embed_size 300
+  cuda: &use_cuda true
+  hidden_size: &hidden_size 200
+  word_dropout: &wd 0.2
+  dropout: &drop 0.1
+  seed: 5783287
+# train configs:
+  sample_size: &samplesize 5
+  beam_size: *samplesize
+  batch_size: 50
+  lr: 0.001
+  lr_decay: 0.5
+  lr_decay_after_epoch: 5
+  fixed_grad: &fg false
+  clip_learning_signal: ~
+  begin_semisup_after_dev_acc: 0.0
+  src_max_time_step: &smts 100
+  tgt_max_time_step: &tmts 250
+  unsup_loss_weight: 1.0
+  valid_metric: p_acc
+  log_every: 10
+  patience: 8
+  max_num_trial: 20
+  uniform_init: ~
+  clip_grad: 5.0
+  max_epoch: 20000
+  reset_optimizer: false
+  train_opt: "reinforce"
+  unsup_batch_size: 10
+  kl_anneal: false
+  alpha: 0.1
+  verbose: false
+  eval_mode: F1
+  num_layers: &nl 3
+  exp_name: &exp_n ~
+  dev_every: 1500
+  model_backup: reproduct
+
+prior_configs:
+  model_select: &prior_name LSTMPrior
+  cuda: *use_cuda
+  share_embed: true
+  embed_size: *embed_size
+  hidden_size: *hidden_size
+  dropout: *drop
+  model_file: *prior_name
+  decode_max_time_step: *tmts
+
+encoder_configs:
+  model_select: &encoder_name MySeqParser
+  cuda: *use_cuda
+  embed_size: *embed_size
+  hidden_size: *hidden_size
+  input_drop: *wd
+  dropout_dw: *wd
+  dropout: *drop
+  share_embed: true
+  model_file: *encoder_name
+  decode_max_time_step: *tmts
+  bidirectional: &bidirectional true
+  src_max_time_step: *smts
+  tgt_max_time_step: *tmts
+  use_attention: true
+  num_layers: *nl
+  sample_size: 5
+  eval_mode: F1
+
+baseline_configs:
+  bidirectional: *bidirectional
+  cuda: *use_cuda
+  fixed_grad: *fg
+  hidden_size: *hidden_size
+  model_select: &baseline_name LMBaseline
+  model_file: *baseline_name
+  num_layers: *nl
+  share_embed: true
+
+decoder_configs:
+  bidirectional: *bidirectional
+  cuda: *use_cuda
+  decode_max_time_step: *smts
+  dropout_dw: *wd
+  dropout: *drop
+  embed_size: *embed_size
+  eval_mode: bleu
+  hidden_size: *hidden_size
+  input_drop: *wd
+  model_select: &decoder_name MySeqReconstructor
+  model_file: *decoder_name
+  num_layers: *nl
+  rnn_type: gru
+  sample_size: 5
+  share_embed: true
+  src_max_time_step: *tmts
+  tgt_max_time_step: *smts
+  use_attention: false
+
+vae_configs:
+  anneal_function: logistic
+  bidirectional: true
+  cuda: *use_cuda
+  decode_max_time_step: *smts
+  dropout: *drop
+  embedding_dropout: 0.5
+  embed_size: 300
+  eval_mode: bleu
+  hidden_size: 100
+  hidden_factor:
+  input_drop: *wd
+  logdir: *log
+  log_every: 10
+  latent_size: 100
+  model_select: &ms MySentVAE
+  model_file: *ms
+  max_sequecne_length: 300
+  num_layers: 1
+  print_every: 10
+  rnn_type: gru
+  sample_size: 5
+  share_embed: true
+  src_max_time_step: *smts
+  tgt_max_time_step: *tmts
+  tensorboard_logging: true
+  use_attention: false
+  unk_rate: 0.50
+  k: 0.0025
+  x0: 10000
+  epochs: 10
+  unk_schedule: fixed
+  src_wd: false
+  tgt_wd: true
+  peak_anneal: true
+
+ae_configs:
+  model_select: &ae AutoEncoder
+  model_file: *ae
+  share_embed: true
+  cuda: *use_cuda
+  src_max_time_step: *smts
+  tgt_max_time_step: *tmts
+  embed_size: *hidden_size
+  hidden_size: *embed_size
+  word_drop: *wd
+  dropout: *drop
+  num_layers: *nl
+  bidirectional: true
+  sample_size: 5
+  eval_mode: bleu
