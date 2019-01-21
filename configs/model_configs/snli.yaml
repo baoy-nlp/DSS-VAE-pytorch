@@ -1,15 +1,15 @@
 base_configs:
 # file configs:
   start_iter: 0
-  config_path: /data00/home/baoyu.nlp/toutiao-pytorch/vae-pytorch/configs/model_configs/nag-att.yaml
-  train_file: /data00/home/baoyu.nlp/toutiao-pytorch/snli-svae/train.bin
-  dev_file: /data00/home/baoyu.nlp/toutiao-pytorch/snli-svae/dev.bin
-  test_file: /data00/home/baoyu.nlp/toutiao-pytorch/snli-svae/test.bin
-  vocab: /data00/home/baoyu.nlp/toutiao-pytorch/snli-svae/vocab.bin
-  logdir: &log /data00/home/baoyu.nlp/run_logs
-  model_dir: /data00/home/baoyu.nlp/run_models
+  config_path: {yaml_config}
+  train_file: {train.bin path}
+  dev_file: {dev.bin path}
+  test_file: {test.bin path}
+  vocab: {vocab.bin path}
+  logdir: &log {log dir path}
+  model_dir: {model dir path}
 # model configs:
-  model_select: "SeqParserVAE"
+  model_select: ""
   mode: ~
 # model parameter set
   cuda: &use_cuda true
