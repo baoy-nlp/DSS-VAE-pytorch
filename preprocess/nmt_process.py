@@ -6,9 +6,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from preprocess.tree_for_process import make_s2b_dataset
-from utils.phrase_tree import PhraseTree
-from utils.tools import write_docs
+from preprocess.tree_convert import make_s2b_dataset
+from struct_self.phrase_tree import PhraseTree
+from utils.utility import write_docs
 
 
 def allen_bracker_process(line: str):

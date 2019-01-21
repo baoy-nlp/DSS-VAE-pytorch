@@ -1,9 +1,6 @@
 from __future__ import absolute_import
 
-import argparse
-import os
 import sys
-# sys.path.append(".")
 import time
 
 import torch
@@ -11,17 +8,114 @@ from tensorboardX import SummaryWriter
 
 from metrics.evaluation import evaluate
 from metrics.vae_metrics import VaeEvaluator
-from struct_self.dataset import Dataset
-from struct_self.dataset import to_example
-from utils.config_utils import dict_to_args
-from utils.config_utils import yaml_load_dict
+from utils.vae_utils import create_model
 from utils.vae_utils import get_eval_dir
 from utils.vae_utils import get_exp_info
-from utils.vae_utils import create_model
 from utils.vae_utils import load_data
-from utils.vae_utils import load_model
 from utils.vae_utils import log_tracker
 from utils.vae_utils import lr_schedule
+
+
+def train_nae(main_args, model_args, model=None):
+    train_set, dev_set = load_data(main_args)
+    model, optimizer, vocab = create_model(main_args, model_args, model)
+    model_dir, log_dir = get_exp_info(main_args=main_args, model_args=model_args)
+    model_file = model_dir + '.bin'
+
+    out_dir = model_dir + ".out"
+
+    writer = SummaryWriter(log_dir)
+    writer.add_text("model", str(model))
+    writer.add_text("args", str(main_args))
+
+    train_iter = main_args.start_iter
+    report_loss = report_examples = 0.
+    history_dev_scores = []
+
+    epoch = num_trial = patience = 0
+
+    print("Dev ITEM: ", model_args.dev_item.lower())
+
+    while True:
+        epoch += 1
+        # train_track = {}
+        epoch_begin = time.time()
+        for batch_examples in train_set.batch_iter(batch_size=main_args.batch_size, shuffle=True):
+            train_iter += 1
+            optimizer.zero_grad()
+            loss = -model.score(batch_examples)
+            loss_val = torch.sum(loss).item()
+            report_loss += loss_val
+            report_examples += len(batch_examples)
+            loss = torch.mean(loss)
+            loss.backward()
+
+            if main_args.clip_grad > 0.:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), main_args.clip_grad)
+
+            optimizer.step()
+
+            if train_iter % main_args.log_every == 0:
+                print('\r[Iter %d] Train loss=%.5f' %
+                      (train_iter,
+                       report_loss / report_examples),
+                      file=sys.stderr, end=" ")
+
+                writer.add_scalar(
+                    tag='Train-Iter/AutoEncoder/Loss',
+                    scalar_value=report_loss / report_examples,
+                    global_step=train_iter
+                )
+                writer.add_scalar(
+                    tag='Optimize/lr',
+                    scalar_value=optimizer.param_groups[0]['lr'],
+                    global_step=train_iter,
+                )
+
+                report_loss = report_examples = 0.
+            if train_iter % main_args.dev_every == 0:
+                print()
+                print('\r[Iter %d] begin validation' % train_iter, file=sys.stderr)
+                eval_results = evaluate(examples=dev_set.examples, model=model, eval_src='src', eval_tgt='src',
+                                        out_dir=out_dir)
+                dev_acc = eval_results['accuracy']
+                print('\r[Iter %d] auto_encoder %s=%.5f took %ds' % (
+                    train_iter, model.args.eval_mode, dev_acc, eval_results['use_time']),
+                      file=sys.stderr)
+                writer.add_scalar(
+                    tag='Valid-Iter/AutoEncoder/%s' % model.args.eval_mode,
+                    scalar_value=dev_acc,
+                    global_step=train_iter
+                )
+
+                is_better = history_dev_scores == [] or dev_acc > max(history_dev_scores)
+                history_dev_scores.append(dev_acc)
+
+                writer.add_scalar(
+                    tag='Valid-Iter/AutoEncoder/Best %s' % model.args.eval_mode.upper(),
+                    scalar_value=max(history_dev_scores),
+                    global_step=train_iter
+                )
+
+                model, optimizer, num_trial, patience = lr_schedule(
+                    is_better=is_better,
+                    model_dir=model_dir,
+                    model_file=model_file,
+                    main_args=main_args,
+                    patience=patience,
+                    num_trial=num_trial,
+                    epoch=epoch,
+                    model=model,
+                    optimizer=optimizer,
+                    reload_model=False
+                )
+        epoch_time = time.time() - epoch_begin
+        print('\r[Epoch %d] epoch elapsed %ds' % (epoch, epoch_time), file=sys.stderr)
+        writer.add_scalar(
+            tag='Train-Epoch/Epoch Time',
+            scalar_value=epoch_time,
+            global_step=epoch
+        )
 
 
 def train_ae(main_args, model_args, model=None):
@@ -37,6 +131,7 @@ def train_ae(main_args, model_args, model=None):
 
     model_dir, log_dir = get_exp_info(main_args=main_args, model_args=model_args)
     model_file = model_dir + '.bin'
+    out_dir = model_dir + ".out"
     writer = SummaryWriter(log_dir)
 
     while True:
@@ -69,7 +164,7 @@ def train_ae(main_args, model_args, model=None):
                     global_step=train_iter
                 )
                 writer.add_scalar(
-                    tag='optimize/lr',
+                    tag='Optimize/lr',
                     scalar_value=optimizer.param_groups[0]['lr'],
                     global_step=train_iter,
                 )
@@ -78,12 +173,11 @@ def train_ae(main_args, model_args, model=None):
 
             if train_iter % main_args.dev_every == 0:
                 print()
-                print('\r[Iter %d] begin validation' % train_iter, file=sys.stderr)
-                eval_start = time.time()
-                eval_results = evaluate(examples=dev_set.examples, model=model, eval_src='src', eval_tgt='src')
+                eval_results = evaluate(examples=dev_set.examples, model=model, eval_src='src', eval_tgt='src',
+                                        out_dir=out_dir)
                 dev_acc = eval_results['accuracy']
-                print('\r[Iter %d] auto_encoder %s=%.5f took %ds' % (
-                    train_iter, model.args.eval_mode, dev_acc, time.time() - eval_start),
+                print('\r[Iter %d] AutoEncoder %s=%.5f took %ds' % (
+                    train_iter, model.args.eval_mode, dev_acc, eval_results['use_time']),
                       file=sys.stderr)
                 writer.add_scalar(
                     tag='AutoEncoder/Dev/%s' % model.args.eval_mode,
@@ -95,7 +189,7 @@ def train_ae(main_args, model_args, model=None):
                 history_dev_scores.append(dev_acc)
 
                 writer.add_scalar(
-                    tag='AutoEncoder/Dev/best %s' % model.args.eval_mode,
+                    tag='AutoEncoder/Dev/Best %s' % model.args.eval_mode,
                     scalar_value=max(history_dev_scores),
                     global_step=train_iter
                 )
@@ -123,14 +217,14 @@ def train_ae(main_args, model_args, model=None):
 
 
 def train_vae(main_args, model_args, model=None):
-    ts = time.strftime('%Y-%b-%d-%H:%M:%S', time.gmtime())
+    para_eval_dir = "/home/user_data/baoy/projects/seq2seq_parser/data/quora-mh/unsupervised"
+    para_eval_list = ["dev.para.txt"]
     train_set, dev_set = load_data(main_args)
     model, optimizer, vocab = create_model(main_args, model_args, model)
-
-    model_dir, logdir = get_exp_info(main_args=main_args, model_args=model_args)
+    model_dir, log_dir = get_exp_info(main_args=main_args, model_args=model_args)
     model_file = model_dir + '.bin'
 
-    eval_dir = get_eval_dir(main_args=main_args, model_args=model_args, mode='Trains')
+    eval_dir = get_eval_dir(main_args=main_args, model_args=model_args, mode='Train')
 
     evaluator = VaeEvaluator(
         model=model,
@@ -140,11 +234,9 @@ def train_vae(main_args, model_args, model=None):
 
     )
 
-    # if model_args.tensorboard_logging:
-    writer = SummaryWriter(logdir)
+    writer = SummaryWriter(log_dir)
     writer.add_text("model", str(model))
     writer.add_text("args", str(main_args))
-    writer.add_text("ts", ts)
 
     train_iter = main_args.start_iter
     epoch = num_trial = patience = 0
@@ -223,7 +315,7 @@ def train_vae(main_args, model_args, model=None):
                       % (train_iter, loss.item(), train_avg_nll, train_avg_kl, _kl_weight, model.step_unk_rate),
                       end=' ')
                 writer.add_scalar(
-                    tag='optimize/lr',
+                    tag='Optimize/lr',
                     scalar_value=optimizer.param_groups[0]['lr'],
                     global_step=train_iter,
                 )
@@ -280,7 +372,7 @@ def train_vae(main_args, model_args, model=None):
                     is_better = history_bleu == [] or dev_bleu > max(history_bleu)
 
                 history_elbo.append(dev_elbo)
-                writer.add_scalar("Evaluation/VAE/Best Score", min(history_elbo), train_iter)
+                writer.add_scalar("Evaluation/VAE/Best ELBO Score", min(history_elbo), train_iter)
                 history_bleu.append(dev_bleu)
                 writer.add_scalar("Evaluation/VAE/Best BLEU Score", max(history_bleu), train_iter)
 
@@ -313,11 +405,10 @@ def train_vae(main_args, model_args, model=None):
                 if model_args.dev_item.lower().startswith("para") and memory_temp_count > 0:
 
                     para_score = evaluator.evaluate_para(
-                        eval_dir="/home/user_data/baoy/projects/seq2seq_parser/data/quora-mh/unsupervised",
-                        # eval_list=["para.raw.text", "para.text"])
-                        #  eval_list=["para.raw.text"])
-                        eval_list=["dev.para.txt", "test.para.txt"],
-                        eval_desc="para_iter{}".format(train_iter))
+                        eval_dir=para_eval_dir,
+                        eval_list=para_eval_list,
+                        eval_desc="para_iter{}".format(train_iter)
+                    )
                     if memory_temp_count == 3:
                         writer.add_scalar(
                             tag='Evaluation/VAE/Para Dev Ori-BLEU',
@@ -364,140 +455,3 @@ def train_vae(main_args, model_args, model=None):
                 torch.mean(val) if isinstance(val, t_type) else val,
                 epoch
             )
-
-
-def test_vae(main_args, model_args, input_mode=0):
-    model = load_model(main_args, model_args, check_dir=False)
-    out_dir = get_eval_dir(main_args=main_args, model_args=model_args, mode="Test")
-    model.eval()
-    if not os.path.exists(out_dir):
-        sys.exit(-1)
-    if model_args.model_select.startswith("Origin"):
-        model_args.eval_bs = 20 if model_args.eval_bs < 20 else model_args.eval_bs
-    evaluator = VaeEvaluator(
-        model=model,
-        out_dir=out_dir,
-        eval_batch_size=model_args.eval_bs,
-        train_batch_size=main_args.batch_size
-    )
-    train_exam = Dataset.from_bin_file(main_args.train_file).examples
-
-    para_eval_dir = "/home/user_data/baoy/projects/seq2seq_parser/data/quora-mh/unsupervised"
-    para_eval_list = ["dev.para.txt"]
-    # ["dev.para.txt", "test.para.txt"]
-
-    if input_mode == 0:
-        print("========dev reconstructor========")
-        test_set = Dataset.from_bin_file(main_args.dev_file)
-        evaluator.evaluate_reconstruction(examples=test_set.examples, eval_desc="dev")
-        print("finish")
-        print("========test reconstructor=======")
-        test_set = Dataset.from_bin_file(main_args.test_file)
-        evaluator.evaluate_reconstruction(examples=test_set.examples, eval_desc="test")
-        print("finish")
-        print("========generating samples=======")
-        evaluator.evaluate_generation(corpus_examples=train_exam, sample_size=len(test_set.examples), eval_desc="gen")
-        print("finish")
-    elif input_mode == 1:
-        print("========generating samples=======")
-        test_exam = Dataset.from_bin_file(main_args.test_file).examples
-        evaluator.evaluate_generation(corpus_examples=train_exam, sample_size=len(test_exam), eval_desc="gen")
-        print("finish")
-    elif input_mode == 2:
-        print("========generating paraphrase========")
-        evaluator.evaluate_para(eval_dir=para_eval_dir, eval_list=para_eval_list)
-        print("finish")
-    elif input_mode == 3:
-        print("========supervised generation========")
-        # evaluator.evaluate_control()
-        evaluator.evaluate_control(eval_dir=para_eval_dir, eval_list=para_eval_list)
-        print("finish")
-    elif input_mode == 4:
-        trans_eval_list = ["trans.length.txt", "trans.random.txt"]
-        print("========style transfer========")
-        evaluator.evaluate_style_transfer(eval_dir=para_eval_dir, eval_list=trans_eval_list, eval_desc="unmatch")
-        evaluator.evaluate_style_transfer(eval_dir=para_eval_dir, eval_list=para_eval_list, eval_desc="match")
-        print("finish")
-    elif input_mode == 5:
-        print("========random syntax select========")
-        evaluator.evaluate_pure_para(eval_dir=para_eval_dir, eval_list=para_eval_list)
-        print("finish")
-    else:
-        raw = input("raw sent: ")
-        while not raw.startswith("EXIT"):
-            e = to_example(raw)
-            words = model.predict(e)
-            print("origin:", " ".join(words[0][0][0]))
-            to_ref = input("ref syn : ")
-            while not to_ref.startswith("NEXT"):
-                syn_ref = to_example(to_ref)
-                ret = model.eval_adv(e, syn_ref)
-                if not model_args.model_select == "OriginVAE":
-                    print("ref syntax: ", " ".join(ret['ref syn'][0][0][0]))
-                    print("ori syntax: ", " ".join(ret['ori syn'][0][0][0]))
-                print("switch result: ", " ".join(ret['res'][0][0][0]))
-                to_ref = input("ref syn: ")
-            raw = input("input : ")
-
-
-def process_args():
-    opt_parser = argparse.ArgumentParser()
-    opt_parser.add_argument('--config_files', type=str, help='config_files')
-    opt_parser.add_argument('--exp_name', type=str, help='config_files')
-    opt_parser.add_argument('--load_src_lm', type=str, default=None)
-    opt_parser.add_argument('--mode', type=str, default=None)
-    opt = opt_parser.parse_args()
-
-    configs = yaml_load_dict(opt.config_files)
-
-    base_args = dict_to_args(configs['base_configs']) if 'base_configs' in configs else None
-    baseline_args = dict_to_args(configs['baseline_configs']) if 'baseline_configs' in configs else None
-    prior_args = dict_to_args(configs['prior_configs']) if 'prior_configs' in configs else None
-    encoder_args = dict_to_args(configs['encoder_configs']) if 'encoder_configs' in configs else None
-    decoder_args = dict_to_args(configs['decoder_configs']) if 'decoder_configs' in configs else None
-    vae_args = dict_to_args(configs['vae_configs']) if 'vae_configs' in configs else None
-    ae_args = dict_to_args(configs["ae_configs"]) if 'ae_configs' in configs else None
-
-    if base_args is not None:
-        if opt.mode is not None:
-            base_args.mode = opt.mode
-        if opt.exp_name is not None:
-            base_args.exp_name = opt.exp_name
-        if opt.load_src_lm is not None:
-            base_args.load_src_lm = opt.load_src_lm
-
-    return {
-        'base': base_args,
-        "baseline": baseline_args,
-        'prior': prior_args,
-        'encoder': encoder_args,
-        "decoder": decoder_args,
-        "vae": vae_args,
-        "ae": ae_args,
-    }
-
-
-if __name__ == "__main__":
-    config_args = process_args()
-    args = config_args['base']
-    if args.mode == "train_sent":
-        train_vae(args, config_args['vae'])
-    elif args.mode == "train_ae":
-        train_ae(args, config_args['ae'])
-    elif args.mode == "test_vae":
-        raw_sent = int(input("select test mode: "))
-        test_vae(args, config_args['vae'], input_mode=raw_sent)
-    elif args.mode == "test_vaea":
-        test_vae(args, config_args['vae'], input_mode=0)
-    elif args.mode == "test_generating":
-        test_vae(args, config_args['vae'], input_mode=1)
-    elif args.mode == "test_paraphrase":
-        test_vae(args, config_args['vae'], input_mode=2)
-    elif args.mode == "test_control":
-        test_vae(args, config_args['vae'], input_mode=3)
-    elif args.mode == "test_transfer":
-        test_vae(args, config_args['vae'], input_mode=4)
-    elif args.mode == "test_pure_para":
-        test_vae(args, config_args['vae'], input_mode=5)
-    else:
-        raise NotImplementedError

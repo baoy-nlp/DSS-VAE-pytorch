@@ -9,7 +9,7 @@ from itertools import chain
 import torch
 
 from utils.math_utils import js_divergence, kl_divergence
-from utils.ops import get_tensor
+from utils.tensor_ops import get_tensor
 from metrics.base_metric import BaseEvaluator
 
 
@@ -66,8 +66,8 @@ if __name__ == "__main__":
     plain_file = "./gen.text"
     with open(plain_file, 'r') as f:
         sample = [line.split(" ") for line in f.readlines()]
-    from utils.dataset import Dataset
-    from syntaxVAE.vocab import Vocab
+    from struct_self.dataset import Dataset
+    from struct_self.vocab import Vocab
 
     vocab = Vocab.from_bin_file(vocab_file)
     train_exam = Dataset.from_bin_file(train_path).examples

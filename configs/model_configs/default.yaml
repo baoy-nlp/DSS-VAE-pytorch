@@ -1,21 +1,17 @@
 base_configs:
 # file configs:
   start_iter: 0
-  data_mode: &dm unsupervised
-  config_path: /data00/home/baoyu.nlp/toutiao-pytorch/vae-pytorch/configs/model_configs/nag-att.yaml
-  train_file: /data00/home/baoyu.nlp/data/quora/unsupervised/train.bin
-  dev_file: /data00/home/baoyu.nlp/data/quora/unsupervised/dev.bin
-  test_file: /data00/home/baoyu.nlp/data/quora/unsupervised/test.bin
-  vocab: /data00/home/baoyu.nlp/data/quora/unsupervised/vocab.bin
-  logdir: &log /data00/home/baoyu.nlp/run_logs
-  model_dir: /data00/home/baoyu.nlp/run_models
+  config_path: {}
+  train_file: {}
+  dev_file: {}
+  test_file: {}
+  vocab: {}
+  unlabeled_file: ~
+  logdir: &log {}
+  save_decode_to: ~
+  model_dir: {}
 # model configs:
   mode: ~
-  load_decoder: ~
-  load_baseline: ~
-  load_prior: ~
-  load_encoder: ~
-  load_src_lm: ~
 # model parameter set
   cuda: &use_cuda true
   seed: 5783287
@@ -40,7 +36,6 @@ base_configs:
   valid_metric: p_acc
   uniform_init: ~
   max_epoch: 20000
-  unsup_batch_size: 10
   kl_anneal: false
   alpha: 0.1
   verbose: false

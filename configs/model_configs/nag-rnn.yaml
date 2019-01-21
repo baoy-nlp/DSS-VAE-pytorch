@@ -1,21 +1,15 @@
 base_configs:
 # file configs:
   start_iter: 0
-  data_mode: &dm unsupervised
   config_path: /data00/home/baoyu.nlp/toutiao-pytorch/vae-pytorch/configs/model_configs/nag-att.yaml
-  train_file: /data00/home/baoyu.nlp/data/quora/unsupervised/train.bin
-  dev_file: /data00/home/baoyu.nlp/data/quora/unsupervised/dev.bin
-  test_file: /data00/home/baoyu.nlp/data/quora/unsupervised/test.bin
-  vocab: /data00/home/baoyu.nlp/data/quora/unsupervised/vocab.bin
+  train_file: /data00/home/baoyu.nlp/toutiao-pytorch/snli-ae/train.bin
+  dev_file: /data00/home/baoyu.nlp/toutiao-pytorch/snli-ae/dev.bin
+  test_file: /data00/home/baoyu.nlp/toutiao-pytorch/snli-ae/test.bin
+  vocab: /data00/home/baoyu.nlp/toutiao-pytorch/snli-ae/vocab.bin
   logdir: &log /data00/home/baoyu.nlp/run_logs
   model_dir: /data00/home/baoyu.nlp/run_models
 # model configs:
   mode: ~
-  load_decoder: ~
-  load_baseline: ~
-  load_prior: ~
-  load_encoder: ~
-  load_src_lm: ~
 # model parameter set
   cuda: &use_cuda true
   seed: 5783287
@@ -27,24 +21,19 @@ base_configs:
   log_every: 50
   patience: 8
   max_num_trial: 20
-  dev_every: 1000
+  dev_every: 500
   clip_grad: 5.0
   reset_optimizer: false
-  src_max_time_step: &smts 40
-  tgt_max_time_step: &tmts 120
-  sample_size: &samplesize 5
-  beam_size: *samplesize
+  src_max_time_step: &smts 55
+  tgt_max_time_step: &tmts 55
+  beam_size: 5
   clip_learning_signal: ~
-  begin_semisup_after_dev_acc: 0.0
-  unsup_loss_weight: 1.0
   valid_metric: p_acc
   uniform_init: ~
   max_epoch: 20000
-  unsup_batch_size: 10
   kl_anneal: false
   alpha: 0.1
   verbose: false
-  eval_mode: F1
   exp_name: &exp_n ~
   model_backup: reproduct
 
@@ -112,7 +101,7 @@ vae_configs:
   eval_adv: false
   eval_mul: false
   dev_item: ELBO
-  eval_bs: 10
+  eval_bs: 50
   report: ~
 
 ae_configs:
@@ -144,3 +133,34 @@ ae_configs:
   word_drop: 0.25
   sample_size: 5
   eval_mode: bleu
+
+nag_configs:
+  embed_size: &nes 300
+  hidden_size: *nes
+  model_select: &nae ParallelAE
+  enc_type: rnn
+  src_max_time_step: *smts
+  tgt_max_time_step: *tmts
+  enc_embed_dim: *nes
+  enc_hidden_dim: *nes
+  enc_ed: &ned 0.1
+  enc_rd: &nrd 0.1
+  bidirectional: True
+  rnn_type: gru
+  enc_head: 6
+  enc_num_layers: 2
+  enc_inner_hidden: 600
+  dec_type: mat-att
+  dec_num_layers: 4
+  dec_head: 6
+  dec_hidden_dim: *nes
+  dec_inner_hidden: 600
+  dec_rd: *nrd
+  dropm: *ned
+  dropo: *nrd
+  word_drop: 0.0
+  cuda: *use_cuda
+  eval_mode: bleu
+  eval_bs: 100
+  model_file: *nae
+  dev_item: BLEU

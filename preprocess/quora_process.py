@@ -9,9 +9,9 @@ import sys
 sys.path.append(".")
 from utils.config_utils import dict_to_args
 from utils.config_utils import yaml_load_dict
-from utils.phrase_tree import PhraseTree
-from utils.tools import write_docs
-from preprocess.tree_for_process import make_s2b_dataset
+from struct_self.phrase_tree import PhraseTree
+from utils.utility import write_docs
+from preprocess.tree_convert import make_s2b_dataset
 import random
 
 

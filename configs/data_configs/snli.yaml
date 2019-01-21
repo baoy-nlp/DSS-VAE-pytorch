@@ -1,7 +1,7 @@
 data_dirs: /home/user_data/baoy/projects/seq2seq_parser/data/snli
-train_file: train.clean
-dev_file: dev.clean
-test_file: test.clean
+train_file: train.tree
+dev_file: dev.tree
+test_file: test.tree
 rm_repeat: true
 cut_off: 1
 max_src_vocab: 40000

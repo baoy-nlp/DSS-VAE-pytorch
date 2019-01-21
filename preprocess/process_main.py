@@ -10,7 +10,7 @@ from utils.config_utils import dict_to_args
 from utils.config_utils import yaml_load_dict
 from preprocess.nmt_process import make_nmt_dataset
 from preprocess.nmt_process import make_nmt_simple_dataset
-from preprocess.generate_dataset import prepare_dataset
+from struct_self.generate_dataset import make_dataset
 
 
 def nmt_preprocess():
@@ -35,7 +35,7 @@ def nmt_construction():
         "dev": "dev.s2b",
         "test": "test.s2b",
     }
-    prepare_dataset(
+    make_dataset(
         data_dir=data_dir,
         data_dict=data_dict,
         tgt_dir=data_dir,
@@ -45,7 +45,7 @@ def nmt_construction():
         max_src_length=-1,
         max_tgt_length=-1,
     )
-    prepare_dataset(
+    make_dataset(
         data_dir=data_dir,
         data_dict=data_dict,
         tgt_dir=args.sample_tgts,
@@ -79,7 +79,7 @@ def mt_construction():
         "dev": "dev.s2b",
         "test": "test.s2b",
     }
-    prepare_dataset(
+    make_dataset(
         data_dir=data_dir,
         data_dict=data_dict,
         tgt_dir=data_dir,
@@ -113,7 +113,7 @@ def webnlg_construction():
         "dev": "dev.s2b",
         "test": "test.s2b",
     }
-    prepare_dataset(
+    make_dataset(
         data_dir=data_dir,
         data_dict=data_dict,
         tgt_dir=data_dir,
@@ -135,7 +135,7 @@ def webnlg_robust_construction():
         "dev": "dev.s2b",
         "test": "test.s2b",
     }
-    prepare_dataset(
+    make_dataset(
         data_dir=data_dir,
         data_dict=data_dict,
         tgt_dir=args.sample_tgts,
@@ -157,7 +157,7 @@ def s2b_construction(is_write=True):
         "dev": "dev.s2b",
         "test": "test.s2b",
     }
-    prepare_dataset(
+    make_dataset(
         data_dir=data_dir,
         data_dict=data_dict,
         tgt_dir=data_dir,
@@ -180,7 +180,7 @@ def snli_process_construction(is_write=True):
         "dev": "dev.s2b",
         "test": "test.s2b",
     }
-    prepare_dataset(
+    make_dataset(
         data_dir=data_dir,
         data_dict=data_dict,
         tgt_dir=args.target_tgts,
@@ -203,7 +203,7 @@ def snli_sample_construction(is_write=True):
         "dev": "dev.s2b",
         "test": "test.s2b",
     }
-    prepare_dataset(
+    make_dataset(
         data_dir=data_dir,
         data_dict=data_dict,
         tgt_dir=args.target_tgts,
@@ -226,7 +226,7 @@ def quora_construction(config_file="/home/user_data/baoy/projects/seq2seq_parser
         "dev": "dev.s2b",
         "test": "test.s2b",
     }
-    prepare_dataset(
+    make_dataset(
         data_dir=data_dir,
         data_dict=data_dict,
         tgt_dir=args.data_tgts,
