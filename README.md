@@ -1,4 +1,4 @@
-## Code base: [syntax-VAE](https://github.com/baoy-nlp/TextVAE-pytorch)
+## Code base: (https://github.com/baoy-nlp/TextVAE-pytorch)
 
 ## Requirements
 - [ZPar](https://sourceforge.net/projects/zpar/files/0.7.5/zpar-0.7.5.tar.gz/download)(parsing for preprocess)
@@ -36,12 +36,6 @@
 - with following command:
 
   `python main.py --config_files [config.yaml file] --mode train_vae --exp_name [exp_name:for note]`
-   
-## Evaluation
-*   F1 Score for Parser
-*   Reconstruction BLEU for VAE
-*   PPL for Unconditional Generation
-*   BLEU for Paraphrase Generation
 
 ## Corresponding Result
 
