@@ -37,8 +37,3 @@
 
   `python main.py --config_files [config.yaml file] --mode train_vae --exp_name [exp_name:for note]`
 
-## Corresponding Result
-
-
-## Use for Paraphrase Detection
-
