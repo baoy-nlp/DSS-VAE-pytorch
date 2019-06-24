@@ -25,15 +25,15 @@
         
         `python struct_self/generate_dataset.py --train_file [<Sentence,LinearTree> file] --dev_file [<Sentence,LinearTree> file] --test_file [<Sentence,LinearTree> file] --tgt_dir [output_dir] --max_src_vocab 30000 --max_src_len 30 --max_tgt_len 90 --train_size 100000`
 
-- After Pre-Process, you get the prepared data set as same as 【snli-svae is tgt_dir，contains】:
-    > SNLI-SVAE [You Tgt Dir]
+- After Pre-Process, the prepared data directory structure is as follows:
+    > SNLI-SVAE [Tgt Dir]
      > - train.bin
      > - test.bin
      > - dev.bin
      > - vocab.bin
 
 ## Training
-- with following command:
+- training from scratch with following command:
 
   `python main.py --config_files [config.yaml file] --mode train_vae --exp_name [exp_name:for note]`
 
